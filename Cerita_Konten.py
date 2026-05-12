@@ -25,26 +25,39 @@ APP_PASSWORD = "ronald371011"
 if "login_berhasil" not in st.session_state:
     st.session_state["login_berhasil"] = False
 
+if "login_error" not in st.session_state:
+    st.session_state["login_error"] = ""
+
+
+def proses_login():
+    password = st.session_state.get("password_login", "")
+
+    if password == APP_PASSWORD:
+        st.session_state["login_berhasil"] = True
+        st.session_state["login_error"] = ""
+    else:
+        st.session_state["login_error"] = "Password salah."
+
+
 if not st.session_state["login_berhasil"]:
     st.subheader("Login")
 
-    with st.form("form_login", enter_to_submit=True):
-        password = st.text_input(
-            "Masukkan Password",
-            type="password"
-        )
+    st.text_input(
+        "Masukkan Password",
+        type="password",
+        key="password_login",
+        on_change=proses_login
+    )
 
-        masuk = st.form_submit_button(
-            "Masuk",
-            use_container_width=True
-        )
+    if st.session_state["login_error"]:
+        st.error(st.session_state["login_error"])
 
-    if masuk:
-        if password == APP_PASSWORD:
-            st.session_state["login_berhasil"] = True
+    if st.button("Masuk", use_container_width=True):
+        proses_login()
+        if st.session_state["login_berhasil"]:
             st.rerun()
-        else:
-            st.error("Password salah.")
+
+    st.caption("Setelah mengetik password, tekan Enter. Tombol Masuk tetap tersedia sebagai cadangan.")
 
     st.stop()
 
