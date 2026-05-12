@@ -159,7 +159,227 @@ def delete_image(path_text):
             Path(path_text).unlink(missing_ok=True)
         except Exception:
             pass
+# =====================================================
+# GEMINI VISION - ANALISA OTOMATIS FOTO REFERENSI
+# =====================================================
 
+def get_mime_type(file_path):
+    suffix = Path(file_path).suffix.lower()
+
+    if suffix in [".jpg", ".jpeg"]:
+        return "image/jpeg"
+
+    if suffix == ".png":
+        return "image/png"
+
+    return "image/jpeg"
+
+
+def ambil_json_dari_teks(teks):
+    teks = teks or ""
+    teks = teks.strip()
+
+    teks = teks.replace("```json", "")
+    teks = teks.replace("```", "")
+    teks = teks.strip()
+
+    mulai = teks.find("{")
+    akhir = teks.rfind("}")
+
+    if mulai != -1 and akhir != -1:
+        teks = teks[mulai:akhir + 1]
+
+    try:
+        return json.loads(teks)
+    except Exception:
+        return {}
+
+
+def analisa_foto_referensi_gemini(karakter):
+    try:
+        from google import genai
+        from google.genai import types
+    except Exception:
+        return {
+            "error": "Library Gemini belum terbaca. Pastikan requirements.txt sudah berisi google-genai lalu reboot app."
+        }
+
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
+
+    if not api_key:
+        return {
+            "error": "GEMINI_API_KEY belum ditemukan di Streamlit Secrets."
+        }
+
+    foto_ibu = karakter.get("foto_ibu", "")
+    foto_anak = karakter.get("foto_anak", "")
+    foto_ruangan = karakter.get("foto_ruangan", "")
+
+    if not foto_ibu or not Path(foto_ibu).exists():
+        return {"error": "Foto ibu belum tersedia."}
+
+    if not foto_anak or not Path(foto_anak).exists():
+        return {"error": "Foto anak belum tersedia."}
+
+    if not foto_ruangan or not Path(foto_ruangan).exists():
+        return {"error": "Foto ruangan belum tersedia."}
+
+    client = genai.Client(api_key=api_key)
+
+    prompt = """
+Analisa foto referensi berikut untuk membuat detail lock video cerpen.
+
+Tugas kamu:
+1. Baca foto ibu.
+2. Baca foto anak.
+3. Baca foto dekorasi ruangan.
+4. Buat detail lock yang rinci agar foto baru tetap konsisten.
+5. Jangan mengarang detail yang tidak terlihat.
+6. Kalau ada detail yang tidak terlihat jelas, tulis "tidak terlihat jelas".
+7. Fokus pada detail visual, bukan identitas pribadi.
+
+Wajib hasilkan JSON valid saja tanpa markdown, tanpa penjelasan tambahan.
+
+Format JSON wajib seperti ini:
+{
+  "detail_ibu": "...",
+  "detail_anak": "...",
+  "detail_pakaian_ibu": "...",
+  "detail_pakaian_anak": "...",
+  "detail_aksesoris_ibu": "...",
+  "detail_aksesoris_anak": "...",
+  "detail_ruangan_lock": "...",
+  "catatan_larangan": "..."
+}
+
+Isi yang harus diperhatikan:
+
+detail_ibu:
+- usia visual perkiraan
+- bentuk wajah yang terlihat
+- warna kulit yang terlihat
+- bentuk tubuh yang terlihat
+- gaya rambut atau penutup kepala
+- ekspresi umum
+- ciri visual yang harus dipertahankan
+
+detail_anak:
+- usia visual perkiraan
+- bentuk wajah yang terlihat
+- warna kulit yang terlihat
+- bentuk tubuh yang terlihat
+- gaya rambut
+- ekspresi umum
+- ciri visual yang harus dipertahankan
+
+detail_pakaian_ibu:
+- jenis pakaian
+- warna pakaian
+- bentuk kerah
+- bentuk lengan
+- motif
+- tekstur kain
+- detail kancing
+- bawahan jika terlihat
+- sepatu atau sandal jika terlihat
+- semua detail pakaian yang tidak boleh berubah
+
+detail_pakaian_anak:
+- jenis pakaian
+- warna pakaian
+- bentuk kerah
+- bentuk lengan
+- motif
+- tekstur kain
+- detail kancing
+- bawahan jika terlihat
+- sepatu atau sandal jika terlihat
+- semua detail pakaian yang tidak boleh berubah
+
+detail_aksesoris_ibu:
+- aksesoris yang terlihat
+- posisi aksesoris
+- warna aksesoris
+- jika tidak terlihat, tulis tidak terlihat memakai aksesoris dan jangan menambahkan aksesoris baru
+
+detail_aksesoris_anak:
+- aksesoris yang terlihat
+- posisi aksesoris
+- warna aksesoris
+- jika tidak terlihat, tulis tidak terlihat memakai aksesoris dan jangan menambahkan aksesoris baru
+
+detail_ruangan_lock:
+- warna dinding
+- tekstur dinding
+- dekorasi tembok
+- posisi dekorasi tembok
+- meja
+- posisi meja
+- kursi
+- sofa
+- kasur
+- lemari
+- rak
+- lampu
+- jendela
+- tirai
+- karpet
+- cermin
+- hiasan ruangan
+- tata letak properti utama
+- suasana ruangan
+- semua hal yang harus tetap sama
+
+catatan_larangan:
+- jangan mengubah wajah
+- jangan mengubah pakaian
+- jangan mengubah aksesoris
+- jangan memindahkan meja
+- jangan menghilangkan dekorasi tembok
+- jangan mengubah warna dinding
+- jangan mengganti ruangan
+- jangan menambah properti besar baru
+""".strip()
+
+    contents = [
+        "FOTO IBU:",
+        types.Part.from_bytes(
+            data=Path(foto_ibu).read_bytes(),
+            mime_type=get_mime_type(foto_ibu)
+        ),
+        "FOTO ANAK:",
+        types.Part.from_bytes(
+            data=Path(foto_anak).read_bytes(),
+            mime_type=get_mime_type(foto_anak)
+        ),
+        "FOTO RUANGAN:",
+        types.Part.from_bytes(
+            data=Path(foto_ruangan).read_bytes(),
+            mime_type=get_mime_type(foto_ruangan)
+        ),
+        prompt
+    ]
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=contents
+        )
+
+        hasil = ambil_json_dari_teks(response.text)
+
+        if not hasil:
+            return {
+                "error": "Gemini berhasil menjawab, tetapi hasilnya belum berbentuk JSON yang bisa dibaca.",
+                "raw": response.text
+            }
+
+        return hasil
+
+    except Exception as e:
+        return {
+            "error": f"Gagal memanggil Gemini API: {e}"
+        }
 
 # =====================================================
 # GENERATE SCENE
