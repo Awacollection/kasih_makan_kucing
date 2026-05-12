@@ -1,31 +1,48 @@
 import streamlit as st
-from theme import apply_black_green_theme
-from auth import check_login
-check_login()
 import json
 from pathlib import Path
-st.set_page_config(page_title="Cerita Konten", layout="wide")
-apply_black_green_theme()
+
+st.set_page_config(
+    page_title="Cerita Konten",
+    layout="wide"
+)
+
+try:
+    from theme import apply_black_green_theme
+    apply_black_green_theme()
+except Exception:
+    pass
+
 st.title("Cerita Konten")
+
+
 # =====================================================
 # SIMPLE PASSWORD LOGIN
 # =====================================================
-APP_PASSWORD = "ronald371011"  # ganti nanti dengan password kamu sendiri
+
+APP_PASSWORD = "ronald371011"
+
 if "login_berhasil" not in st.session_state:
     st.session_state["login_berhasil"] = False
+
 if not st.session_state["login_berhasil"]:
     st.subheader("Login")
+
     password = st.text_input(
         "Masukkan Password",
         type="password"
     )
+
     if st.button("Masuk"):
         if password == APP_PASSWORD:
             st.session_state["login_berhasil"] = True
             st.rerun()
         else:
             st.error("Password salah.")
+
     st.stop()
+
+
 # =====================================================
 # DATABASE
 # =====================================================
