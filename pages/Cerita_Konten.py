@@ -1,13 +1,9 @@
 import streamlit as st
-from theme import apply_black_green_theme
-from auth import check_login
-check_login()
-import json
-from pathlib import Path
-
-st.set_page_config(page_title="Cerita Konten", layout="wide")
-
-apply_black_green_theme()
+try:
+    from theme import apply_black_green_theme
+    apply_black_green_theme()
+except Exception:
+    pass
 st.title("Cerita Konten")
 
 # =====================================================
