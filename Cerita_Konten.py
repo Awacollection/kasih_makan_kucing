@@ -101,6 +101,8 @@ def default_karakter(slot):
 def default_data():
     return {
         "cerita": "",
+        "hasil_scene_cerpen": [],
+        "hasil_scene_text": "",
         "karakter": [
             default_karakter(i)
             for i in range(1, 6)
@@ -114,7 +116,11 @@ def ensure_schema(data):
 
     if "cerita" not in data:
         data["cerita"] = ""
+    if "hasil_scene_cerpen" not in data:
+        data["hasil_scene_cerpen"] = []
 
+    if "hasil_scene_text" not in data:
+        data["hasil_scene_text"] = ""
     if "karakter" not in data or not isinstance(data["karakter"], list):
         data["karakter"] = default_data()["karakter"]
 
@@ -399,6 +405,128 @@ catatan_larangan:
         return {
             "error": f"Gagal memanggil Gemini API: {e}"
         }
+# =====================================================
+# GEMINI IMAGE GENERATION - GENERATE FOTO SCENE
+# =====================================================
+
+def generate_foto_scene_gemini(prompt_foto, karakter, nomor_scene):
+    try:
+        from google import genai
+        from google.genai import types
+    except Exception:
+        return {
+            "error": "Library Gemini belum terbaca. Pastikan requirements.txt sudah berisi google-genai lalu reboot app."
+        }
+
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
+
+    if not api_key:
+        return {
+            "error": "GEMINI_API_KEY belum ditemukan di Streamlit Secrets."
+        }
+
+    foto_ibu = karakter.get("foto_ibu", "")
+    foto_anak = karakter.get("foto_anak", "")
+    foto_ruangan = karakter.get("foto_ruangan", "")
+
+    if not foto_ibu or not Path(foto_ibu).exists():
+        return {"error": "Foto ibu belum tersedia."}
+
+    if not foto_anak or not Path(foto_anak).exists():
+        return {"error": "Foto anak belum tersedia."}
+
+    if not foto_ruangan or not Path(foto_ruangan).exists():
+        return {"error": "Foto ruangan belum tersedia."}
+
+    slot = karakter.get("slot", 1)
+
+    folder_output = ASSET_DIR / "generated_scene" / f"karakter_{slot}"
+    folder_output.mkdir(parents=True, exist_ok=True)
+
+    output_path = folder_output / f"scene_{nomor_scene}.png"
+
+    client = genai.Client(api_key=api_key)
+
+    prompt_final = f"""
+Buat 1 foto realistis vertikal rasio 9:16 untuk video cerpen.
+
+Gunakan tiga foto referensi:
+1. Foto ibu sebagai referensi wajah, tubuh, rambut, pakaian, dan aksesoris ibu.
+2. Foto anak sebagai referensi wajah, tubuh, rambut, pakaian, dan aksesoris anak.
+3. Foto ruangan sebagai referensi dekorasi, meja, furnitur, dinding, dan tata letak ruangan.
+
+Ikuti prompt scene berikut secara ketat:
+
+{prompt_foto}
+
+ATURAN TAMBAHAN:
+- Hasil harus berupa satu foto nyata, bukan kolase.
+- Jangan menambahkan teks, watermark, logo, tulisan, frame komik, atau panel.
+- Jangan mengubah wajah ibu.
+- Jangan mengubah wajah anak.
+- Jangan mengubah pakaian ibu.
+- Jangan mengubah pakaian anak.
+- Jangan mengubah aksesoris.
+- Jangan memindahkan meja.
+- Jangan menghilangkan dekorasi tembok.
+- Jangan mengganti ruangan menjadi lokasi lain.
+- Pertahankan suasana natural seperti foto kamera nyata.
+- Hindari hasil yang terlihat seperti AI, anime, kartun, CGI, render 3D, atau boneka plastik.
+""".strip()
+
+    contents = [
+        prompt_final,
+        "FOTO REFERENSI IBU:",
+        types.Part.from_bytes(
+            data=Path(foto_ibu).read_bytes(),
+            mime_type=get_mime_type(foto_ibu)
+        ),
+        "FOTO REFERENSI ANAK:",
+        types.Part.from_bytes(
+            data=Path(foto_anak).read_bytes(),
+            mime_type=get_mime_type(foto_anak)
+        ),
+        "FOTO REFERENSI RUANGAN:",
+        types.Part.from_bytes(
+            data=Path(foto_ruangan).read_bytes(),
+            mime_type=get_mime_type(foto_ruangan)
+        ),
+    ]
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-image-preview",
+            contents=contents,
+            config=types.GenerateContentConfig(
+                response_modalities=["TEXT", "IMAGE"]
+            )
+        )
+
+        teks_jawaban = []
+
+        for part in response.candidates[0].content.parts:
+            if getattr(part, "text", None):
+                teks_jawaban.append(part.text)
+
+            if getattr(part, "inline_data", None):
+                image = part.as_image()
+                image.save(output_path)
+
+                return {
+                    "path": str(output_path),
+                    "catatan": "\n".join(teks_jawaban)
+                }
+
+        return {
+            "error": "Gemini tidak mengembalikan gambar.",
+            "raw": "\n".join(teks_jawaban)
+        }
+
+    except Exception as e:
+        return {
+            "error": f"Gagal generate foto dengan Gemini: {e}"
+        }
+
 
 # =====================================================
 # GENERATE SCENE
@@ -1145,19 +1273,16 @@ with tab3:
 
     st.divider()
 
-    st.markdown("### Cerpen yang Akan Digenerate")
+    st.markdown("### Cerpen dari Tab Cerita")
 
-    cerita_generate = st.text_area(
-        "Cerita",
-        value=data.get("cerita", ""),
-        height=250,
-        placeholder="Cerpen dari tab Cerita akan muncul di sini. Bisa juga diedit langsung dari sini.",
-        key="cerita_generate"
-    )
+    cerita_generate = data.get("cerita", "")
 
-    if cerita_generate != data.get("cerita", ""):
-        data["cerita"] = cerita_generate
-        save_data(data)
+    if cerita_generate.strip():
+        st.info("Cerpen diambil otomatis dari tab Cerita. Untuk mengubah cerpen, edit di tab Cerita.")
+        with st.expander("Lihat cerpen yang akan digenerate", expanded=False):
+            st.write(cerita_generate)
+    else:
+        st.warning("Cerpen masih kosong. Isi dulu di tab Cerita.")
 
     col_generate1, col_generate2 = st.columns([1, 2])
 
@@ -1189,15 +1314,28 @@ with tab3:
             karakter=data["karakter"][index_karakter]
         )
 
-        st.session_state["hasil_scene_cerpen"] = hasil_scene
-        st.session_state["hasil_scene_text"] = gabungkan_semua_scene(hasil_scene)
+        hasil_scene_text = gabungkan_semua_scene(hasil_scene)
 
-        st.success("Scene, rekomendasi foto, dan prompt foto berhasil dibuat.")
+        st.session_state["hasil_scene_cerpen"] = hasil_scene
+        st.session_state["hasil_scene_text"] = hasil_scene_text
+
+        data["hasil_scene_cerpen"] = hasil_scene
+        data["hasil_scene_text"] = hasil_scene_text
+        save_data(data)
+
+        st.success("Scene, rekomendasi foto, dan prompt foto berhasil dibuat serta disimpan.")
 
     if "hasil_scene_cerpen" in st.session_state:
         hasil_scene = st.session_state["hasil_scene_cerpen"]
         hasil_scene_text = st.session_state.get("hasil_scene_text", gabungkan_semua_scene(hasil_scene))
+    elif data.get("hasil_scene_cerpen"):
+        hasil_scene = data.get("hasil_scene_cerpen", [])
+        hasil_scene_text = data.get("hasil_scene_text", gabungkan_semua_scene(hasil_scene))
+    else:
+        hasil_scene = []
+        hasil_scene_text = ""
 
+    if hasil_scene:
         st.divider()
         st.markdown("### Hasil Scene Cerpen")
 
@@ -1216,7 +1354,10 @@ with tab3:
         )
 
         for scene in hasil_scene:
-            with st.expander(f"SCENE {scene['nomor']} - Durasi {scene['durasi']} detik", expanded=(scene["nomor"] == 1)):
+            with st.expander(
+                f"SCENE {scene['nomor']} - Durasi {scene['durasi']} detik",
+                expanded=(scene["nomor"] == 1)
+            ):
                 st.markdown("#### Bagian Cerita")
                 st.write(scene["bagian_cerita"])
 
@@ -1238,5 +1379,47 @@ with tab3:
 
                 st.markdown("#### Prompt Foto")
                 st.code(scene["prompt_foto"], language="text")
+
+                st.markdown("#### Foto Hasil Generate Gemini")
+
+                foto_generate = scene.get("foto_generate", "")
+
+                if foto_generate and Path(foto_generate).exists():
+                    st.image(foto_generate, use_container_width=True)
+
+                if st.button(
+                    f"Generate Foto Scene {scene['nomor']}",
+                    key=f"generate_foto_scene_{scene['nomor']}",
+                    type="primary",
+                    use_container_width=True
+                ):
+                    with st.spinner(f"Sedang generate foto scene {scene['nomor']} dengan Gemini..."):
+                        hasil_foto = generate_foto_scene_gemini(
+                            prompt_foto=scene["prompt_foto"],
+                            karakter=karakter,
+                            nomor_scene=scene["nomor"]
+                        )
+
+                    if "error" in hasil_foto:
+                        st.error(hasil_foto["error"])
+
+                        if "raw" in hasil_foto:
+                            st.text_area(
+                                "Jawaban mentah Gemini",
+                                value=hasil_foto["raw"],
+                                height=200
+                            )
+                    else:
+                        scene["foto_generate"] = hasil_foto["path"]
+
+                        data["hasil_scene_cerpen"] = hasil_scene
+                        data["hasil_scene_text"] = hasil_scene_text
+                        save_data(data)
+
+                        st.session_state["hasil_scene_cerpen"] = hasil_scene
+                        st.session_state["hasil_scene_text"] = hasil_scene_text
+
+                        st.success(f"Foto Scene {scene['nomor']} berhasil dibuat dan disimpan.")
+                        st.rerun()
     else:
         st.info("Klik tombol 'Buat Scene Cerpen' untuk membuat scene dan prompt foto.")
