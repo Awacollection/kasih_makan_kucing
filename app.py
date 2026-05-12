@@ -30,17 +30,11 @@ if not st.session_state["login_berhasil"]:
             st.error("Password salah.")
 
     st.stop()
-from theme import apply_black_green_theme
-import json
-from datetime import datetime
-
-st.set_page_config(
-    page_title="RAW ENGINE PRO",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-apply_black_green_theme()
+try:
+    from theme import apply_black_green_theme
+    apply_black_green_theme()
+except Exception:
+    pass
 
 # ================= STYLE =================
 st.markdown("""
