@@ -561,7 +561,7 @@ with tab1:
                     path = save_image(ibu_file, slot, "foto_ibu")
                     data["karakter"][index]["foto_ibu"] = path
                     save_data(data)
-                    st.rerun()
+                    st.success("Foto ibu berhasil diupload.")
 
                 if data["karakter"][index].get("foto_ibu"):
                     st.image(data["karakter"][index]["foto_ibu"], use_container_width=True)
@@ -588,7 +588,7 @@ with tab1:
                     path = save_image(anak_file, slot, "foto_anak")
                     data["karakter"][index]["foto_anak"] = path
                     save_data(data)
-                    st.rerun()
+                    st.success("Foto anak berhasil diupload.")
 
                 if data["karakter"][index].get("foto_anak"):
                     st.image(data["karakter"][index]["foto_anak"], use_container_width=True)
@@ -611,11 +611,11 @@ with tab1:
                 )
 
                 if ruang_file is not None:
-                    delete_image(data["karakter"][index].get("foto_ruangan", ""))
-                    path = save_image(ruang_file, slot, "foto_ruangan")
-                    data["karakter"][index]["foto_ruangan"] = path
-                    save_data(data)
-                    st.rerun()
+                   delete_image(data["karakter"][index].get("foto_ruangan", ""))
+                   path = save_image(ruang_file, slot, "foto_ruangan")
+                   data["karakter"][index]["foto_ruangan"] = path
+                   save_data(data)
+                st.success("Foto ruangan berhasil diupload.")
 
                 if data["karakter"][index].get("foto_ruangan"):
                     st.image(data["karakter"][index]["foto_ruangan"], use_container_width=True)
