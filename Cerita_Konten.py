@@ -850,11 +850,11 @@ with tab1:
                 )
 
                 if ruang_file is not None:
-                   delete_image(data["karakter"][index].get("foto_ruangan", ""))
-                   path = save_image(ruang_file, slot, "foto_ruangan")
-                   data["karakter"][index]["foto_ruangan"] = path
-                   save_data(data)
-                st.success("Foto ruangan berhasil diupload.")
+                    delete_image(data["karakter"][index].get("foto_ruangan", ""))
+                    path = save_image(ruang_file, slot, "foto_ruangan")
+                    data["karakter"][index]["foto_ruangan"] = path
+                    save_data(data)
+                    st.success("Foto ruangan berhasil diupload.")
 
                 if data["karakter"][index].get("foto_ruangan"):
                     st.image(data["karakter"][index]["foto_ruangan"], use_container_width=True)
@@ -969,12 +969,24 @@ with tab3:
             st.info("Foto ruangan belum tersedia.")
 
     st.divider()
-    st.markdown("### Analisa Otomatis Foto Referensi")
+        st.markdown("### Analisa Otomatis Foto Referensi")
 
     st.info(
         "Klik tombol ini untuk membaca foto ibu, foto anak, dan foto ruangan secara otomatis memakai Gemini. "
         "Hasil analisa akan mengisi detail karakter, pakaian, aksesoris, ruangan, dan larangan khusus."
     )
+
+    def aman_teks(value):
+        if value is None:
+            return ""
+
+        if isinstance(value, str):
+            return value
+
+        try:
+            return json.dumps(value, ensure_ascii=False, indent=2)
+        except Exception:
+            return str(value)
 
     if st.button("Analisa Otomatis Foto Referensi", type="primary", use_container_width=True):
         with st.spinner("Sedang menganalisa foto referensi dengan Gemini..."):
@@ -986,31 +998,41 @@ with tab3:
             if "raw" in hasil_analisa:
                 st.text_area(
                     "Jawaban mentah Gemini",
-                    value=hasil_analisa["raw"],
+                    value=aman_teks(hasil_analisa["raw"]),
                     height=250
                 )
         else:
-            data["karakter"][index_karakter]["detail_ibu"] = hasil_analisa.get("detail_ibu", "")
-            data["karakter"][index_karakter]["detail_anak"] = hasil_analisa.get("detail_anak", "")
-            data["karakter"][index_karakter]["detail_pakaian_ibu"] = hasil_analisa.get("detail_pakaian_ibu", "")
-            data["karakter"][index_karakter]["detail_pakaian_anak"] = hasil_analisa.get("detail_pakaian_anak", "")
-            data["karakter"][index_karakter]["detail_aksesoris_ibu"] = hasil_analisa.get("detail_aksesoris_ibu", "")
-            data["karakter"][index_karakter]["detail_aksesoris_anak"] = hasil_analisa.get("detail_aksesoris_anak", "")
-            data["karakter"][index_karakter]["detail_ruangan_lock"] = hasil_analisa.get("detail_ruangan_lock", "")
-            data["karakter"][index_karakter]["catatan_larangan"] = hasil_analisa.get("catatan_larangan", "")
+            detail_ibu_hasil = aman_teks(hasil_analisa.get("detail_ibu", ""))
+            detail_anak_hasil = aman_teks(hasil_analisa.get("detail_anak", ""))
+            detail_pakaian_ibu_hasil = aman_teks(hasil_analisa.get("detail_pakaian_ibu", ""))
+            detail_pakaian_anak_hasil = aman_teks(hasil_analisa.get("detail_pakaian_anak", ""))
+            detail_aksesoris_ibu_hasil = aman_teks(hasil_analisa.get("detail_aksesoris_ibu", ""))
+            detail_aksesoris_anak_hasil = aman_teks(hasil_analisa.get("detail_aksesoris_anak", ""))
+            detail_ruangan_hasil = aman_teks(hasil_analisa.get("detail_ruangan_lock", ""))
+            catatan_larangan_hasil = aman_teks(hasil_analisa.get("catatan_larangan", ""))
+
+            data["karakter"][index_karakter]["detail_ibu"] = detail_ibu_hasil
+            data["karakter"][index_karakter]["detail_anak"] = detail_anak_hasil
+            data["karakter"][index_karakter]["detail_pakaian_ibu"] = detail_pakaian_ibu_hasil
+            data["karakter"][index_karakter]["detail_pakaian_anak"] = detail_pakaian_anak_hasil
+            data["karakter"][index_karakter]["detail_aksesoris_ibu"] = detail_aksesoris_ibu_hasil
+            data["karakter"][index_karakter]["detail_aksesoris_anak"] = detail_aksesoris_anak_hasil
+            data["karakter"][index_karakter]["detail_ruangan_lock"] = detail_ruangan_hasil
+            data["karakter"][index_karakter]["catatan_larangan"] = catatan_larangan_hasil
 
             save_data(data)
 
-            st.session_state[f"detail_ibu_lock_{slot_pilihan}"] = hasil_analisa.get("detail_ibu", "")
-            st.session_state[f"detail_anak_lock_{slot_pilihan}"] = hasil_analisa.get("detail_anak", "")
-            st.session_state[f"detail_pakaian_ibu_lock_{slot_pilihan}"] = hasil_analisa.get("detail_pakaian_ibu", "")
-            st.session_state[f"detail_pakaian_anak_lock_{slot_pilihan}"] = hasil_analisa.get("detail_pakaian_anak", "")
-            st.session_state[f"detail_aksesoris_ibu_lock_{slot_pilihan}"] = hasil_analisa.get("detail_aksesoris_ibu", "")
-            st.session_state[f"detail_aksesoris_anak_lock_{slot_pilihan}"] = hasil_analisa.get("detail_aksesoris_anak", "")
-            st.session_state[f"detail_ruangan_lock_{slot_pilihan}"] = hasil_analisa.get("detail_ruangan_lock", "")
-            st.session_state[f"catatan_larangan_lock_{slot_pilihan}"] = hasil_analisa.get("catatan_larangan", "")
+            st.session_state[f"detail_ibu_lock_{slot_pilihan}"] = detail_ibu_hasil
+            st.session_state[f"detail_anak_lock_{slot_pilihan}"] = detail_anak_hasil
+            st.session_state[f"detail_pakaian_ibu_lock_{slot_pilihan}"] = detail_pakaian_ibu_hasil
+            st.session_state[f"detail_pakaian_anak_lock_{slot_pilihan}"] = detail_pakaian_anak_hasil
+            st.session_state[f"detail_aksesoris_ibu_lock_{slot_pilihan}"] = detail_aksesoris_ibu_hasil
+            st.session_state[f"detail_aksesoris_anak_lock_{slot_pilihan}"] = detail_aksesoris_anak_hasil
+            st.session_state[f"detail_ruangan_lock_{slot_pilihan}"] = detail_ruangan_hasil
+            st.session_state[f"catatan_larangan_lock_{slot_pilihan}"] = catatan_larangan_hasil
 
             st.success("Analisa otomatis berhasil. Detail lock sudah terisi.")
+
     st.markdown("### Detail Lock Karakter, Pakaian, Aksesoris, dan Ruangan")
 
     st.warning(
@@ -1022,13 +1044,13 @@ with tab3:
     with col_lock1:
         nama_ibu_lock = st.text_input(
             "Nama ibu",
-            value=karakter.get("nama_ibu", ""),
+            value=aman_teks(karakter.get("nama_ibu", "")),
             key=f"nama_ibu_lock_{slot_pilihan}"
         )
 
         detail_ibu = st.text_area(
             "Detail wajah / tubuh / rambut ibu yang harus dikunci",
-            value=karakter.get("detail_ibu", ""),
+            value=aman_teks(karakter.get("detail_ibu", "")),
             height=120,
             placeholder="Contoh: ibu usia visual 25 tahun, wajah oval, kulit sawo matang, rambut hitam sebahu, tubuh proporsional...",
             key=f"detail_ibu_lock_{slot_pilihan}"
@@ -1036,7 +1058,7 @@ with tab3:
 
         detail_pakaian_ibu = st.text_area(
             "Detail pakaian ibu yang tidak boleh berubah",
-            value=karakter.get("detail_pakaian_ibu", ""),
+            value=aman_teks(karakter.get("detail_pakaian_ibu", "")),
             height=130,
             placeholder="Contoh: blouse krem lengan panjang, kerah bulat, motif floral kecil, bahan katun, rok coklat...",
             key=f"detail_pakaian_ibu_lock_{slot_pilihan}"
@@ -1044,7 +1066,7 @@ with tab3:
 
         detail_aksesoris_ibu = st.text_area(
             "Detail aksesoris ibu yang tidak boleh berubah",
-            value=karakter.get("detail_aksesoris_ibu", ""),
+            value=aman_teks(karakter.get("detail_aksesoris_ibu", "")),
             height=100,
             placeholder="Contoh: gelang tipis warna emas, cincin di tangan kanan, tidak memakai kalung...",
             key=f"detail_aksesoris_ibu_lock_{slot_pilihan}"
@@ -1053,13 +1075,13 @@ with tab3:
     with col_lock2:
         nama_anak_lock = st.text_input(
             "Nama anak",
-            value=karakter.get("nama_anak", ""),
+            value=aman_teks(karakter.get("nama_anak", "")),
             key=f"nama_anak_lock_{slot_pilihan}"
         )
 
         detail_anak = st.text_area(
             "Detail wajah / tubuh / rambut anak yang harus dikunci",
-            value=karakter.get("detail_anak", ""),
+            value=aman_teks(karakter.get("detail_anak", "")),
             height=120,
             placeholder="Contoh: anak perempuan usia visual 4 tahun, wajah bulat, rambut hitam pendek, tubuh kecil natural...",
             key=f"detail_anak_lock_{slot_pilihan}"
@@ -1067,7 +1089,7 @@ with tab3:
 
         detail_pakaian_anak = st.text_area(
             "Detail pakaian anak yang tidak boleh berubah",
-            value=karakter.get("detail_pakaian_anak", ""),
+            value=aman_teks(karakter.get("detail_pakaian_anak", "")),
             height=130,
             placeholder="Contoh: dress putih, lengan ruffle, kancing batok coklat dua lubang di dada depan...",
             key=f"detail_pakaian_anak_lock_{slot_pilihan}"
@@ -1075,7 +1097,7 @@ with tab3:
 
         detail_aksesoris_anak = st.text_area(
             "Detail aksesoris anak yang tidak boleh berubah",
-            value=karakter.get("detail_aksesoris_anak", ""),
+            value=aman_teks(karakter.get("detail_aksesoris_anak", "")),
             height=100,
             placeholder="Contoh: bando pink kecil, tidak memakai kalung, tidak memakai tas...",
             key=f"detail_aksesoris_anak_lock_{slot_pilihan}"
@@ -1083,7 +1105,7 @@ with tab3:
 
     detail_ruangan_lock = st.text_area(
         "Detail ruangan yang harus dikunci secara rinci",
-        value=karakter.get("detail_ruangan_lock", ""),
+        value=aman_teks(karakter.get("detail_ruangan_lock", "")),
         height=160,
         placeholder=(
             "Contoh: ruang keluarga dengan dinding krem, meja kayu kecil di tengah depan sofa, "
@@ -1095,7 +1117,7 @@ with tab3:
 
     catatan_larangan = st.text_area(
         "Catatan larangan khusus",
-        value=karakter.get("catatan_larangan", ""),
+        value=aman_teks(karakter.get("catatan_larangan", "")),
         height=120,
         placeholder=(
             "Contoh: jangan memindahkan meja, jangan menghilangkan dekorasi tembok, jangan mengganti warna dinding, "
