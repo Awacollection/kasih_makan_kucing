@@ -950,7 +950,48 @@ with tab3:
             st.info("Foto ruangan belum tersedia.")
 
     st.divider()
+    st.markdown("### Analisa Otomatis Foto Referensi")
 
+    st.info(
+        "Klik tombol ini untuk membaca foto ibu, foto anak, dan foto ruangan secara otomatis memakai Gemini. "
+        "Hasil analisa akan mengisi detail karakter, pakaian, aksesoris, ruangan, dan larangan khusus."
+    )
+
+    if st.button("Analisa Otomatis Foto Referensi", type="primary", use_container_width=True):
+        with st.spinner("Sedang menganalisa foto referensi dengan Gemini..."):
+            hasil_analisa = analisa_foto_referensi_gemini(karakter)
+
+        if "error" in hasil_analisa:
+            st.error(hasil_analisa["error"])
+
+            if "raw" in hasil_analisa:
+                st.text_area(
+                    "Jawaban mentah Gemini",
+                    value=hasil_analisa["raw"],
+                    height=250
+                )
+        else:
+            data["karakter"][index_karakter]["detail_ibu"] = hasil_analisa.get("detail_ibu", "")
+            data["karakter"][index_karakter]["detail_anak"] = hasil_analisa.get("detail_anak", "")
+            data["karakter"][index_karakter]["detail_pakaian_ibu"] = hasil_analisa.get("detail_pakaian_ibu", "")
+            data["karakter"][index_karakter]["detail_pakaian_anak"] = hasil_analisa.get("detail_pakaian_anak", "")
+            data["karakter"][index_karakter]["detail_aksesoris_ibu"] = hasil_analisa.get("detail_aksesoris_ibu", "")
+            data["karakter"][index_karakter]["detail_aksesoris_anak"] = hasil_analisa.get("detail_aksesoris_anak", "")
+            data["karakter"][index_karakter]["detail_ruangan_lock"] = hasil_analisa.get("detail_ruangan_lock", "")
+            data["karakter"][index_karakter]["catatan_larangan"] = hasil_analisa.get("catatan_larangan", "")
+
+            save_data(data)
+
+            st.session_state[f"detail_ibu_lock_{slot_pilihan}"] = hasil_analisa.get("detail_ibu", "")
+            st.session_state[f"detail_anak_lock_{slot_pilihan}"] = hasil_analisa.get("detail_anak", "")
+            st.session_state[f"detail_pakaian_ibu_lock_{slot_pilihan}"] = hasil_analisa.get("detail_pakaian_ibu", "")
+            st.session_state[f"detail_pakaian_anak_lock_{slot_pilihan}"] = hasil_analisa.get("detail_pakaian_anak", "")
+            st.session_state[f"detail_aksesoris_ibu_lock_{slot_pilihan}"] = hasil_analisa.get("detail_aksesoris_ibu", "")
+            st.session_state[f"detail_aksesoris_anak_lock_{slot_pilihan}"] = hasil_analisa.get("detail_aksesoris_anak", "")
+            st.session_state[f"detail_ruangan_lock_{slot_pilihan}"] = hasil_analisa.get("detail_ruangan_lock", "")
+            st.session_state[f"catatan_larangan_lock_{slot_pilihan}"] = hasil_analisa.get("catatan_larangan", "")
+
+            st.success("Analisa otomatis berhasil. Detail lock sudah terisi.")
     st.markdown("### Detail Lock Karakter, Pakaian, Aksesoris, dan Ruangan")
 
     st.warning(
