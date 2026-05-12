@@ -969,7 +969,7 @@ with tab3:
             st.info("Foto ruangan belum tersedia.")
 
     st.divider()
-        st.markdown("### Analisa Otomatis Foto Referensi")
+    st.markdown("### Analisa Otomatis Foto Referensi")
 
     st.info(
         "Klik tombol ini untuk membaca foto ibu, foto anak, dan foto ruangan secara otomatis memakai Gemini. "
