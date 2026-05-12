@@ -28,12 +28,18 @@ if "login_berhasil" not in st.session_state:
 if not st.session_state["login_berhasil"]:
     st.subheader("Login")
 
-    password = st.text_input(
-        "Masukkan Password",
-        type="password"
-    )
+    with st.form("form_login", enter_to_submit=True):
+        password = st.text_input(
+            "Masukkan Password",
+            type="password"
+        )
 
-    if st.button("Masuk"):
+        masuk = st.form_submit_button(
+            "Masuk",
+            use_container_width=True
+        )
+
+    if masuk:
         if password == APP_PASSWORD:
             st.session_state["login_berhasil"] = True
             st.rerun()
