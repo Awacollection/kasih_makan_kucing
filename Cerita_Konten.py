@@ -909,10 +909,9 @@ def buat_url_login_google_oauth():
     flow = buat_google_oauth_flow()
 
     authorization_url, state = flow.authorization_url(
-        access_type="offline",
-        include_granted_scopes=True,
-        prompt="consent"
-    )
+    access_type="offline",
+    prompt="consent"
+)
 
     st.session_state["google_oauth_state"] = state
 
