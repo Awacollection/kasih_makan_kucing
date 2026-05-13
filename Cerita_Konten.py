@@ -858,6 +858,134 @@ Prompt foto:
 
     return ("\n\n" + "=" * 80 + "\n\n").join(blok)
 
+# =====================================================
+# GOOGLE OAUTH - TES AKSES GEMINI
+# =====================================================
+
+OAUTH_SCOPES = [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/generative-language.retriever",
+]
+
+
+def ambil_query_param(nama):
+    try:
+        value = st.query_params.get(nama)
+    except Exception:
+        return None
+
+    if isinstance(value, list):
+        return value[0] if value else None
+
+    return value
+
+
+def buat_google_oauth_flow():
+    from google_auth_oauthlib.flow import Flow
+
+    client_config = {
+        "web": {
+            "client_id": st.secrets.get("GOOGLE_CLIENT_ID", ""),
+            "client_secret": st.secrets.get("GOOGLE_CLIENT_SECRET", ""),
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [
+                st.secrets.get("GOOGLE_REDIRECT_URI", "")
+            ],
+        }
+    }
+
+    flow = Flow.from_client_config(
+        client_config=client_config,
+        scopes=OAUTH_SCOPES
+    )
+
+    flow.redirect_uri = st.secrets.get("GOOGLE_REDIRECT_URI", "")
+
+    return flow
+
+
+def buat_url_login_google_oauth():
+    flow = buat_google_oauth_flow()
+
+    authorization_url, state = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes=True,
+        prompt="consent"
+    )
+
+    st.session_state["google_oauth_state"] = state
+
+    return authorization_url
+
+
+def proses_callback_google_oauth():
+    code = ambil_query_param("code")
+
+    if not code:
+        return
+
+    if "google_oauth_credentials" in st.session_state:
+        return
+
+    try:
+        flow = buat_google_oauth_flow()
+        flow.fetch_token(code=code)
+
+        creds = flow.credentials
+
+        project_id = st.secrets.get("GOOGLE_PROJECT_ID", "")
+        if project_id:
+            creds = creds.with_quota_project(project_id)
+
+        st.session_state["google_oauth_credentials"] = creds
+        st.session_state["google_oauth_status"] = "Login Google OAuth berhasil."
+
+        try:
+            st.query_params.clear()
+        except Exception:
+            pass
+
+        st.rerun()
+
+    except Exception as e:
+        st.session_state["google_oauth_error"] = f"Gagal login OAuth: {e}"
+
+
+def tes_oauth_gemini_models():
+    try:
+        from google import genai
+        from google.auth.transport.requests import Request
+    except Exception:
+        return {
+            "error": "Library OAuth belum terbaca. Pastikan requirements.txt sudah berisi google-auth dan google-auth-oauthlib."
+        }
+
+    creds = st.session_state.get("google_oauth_credentials")
+
+    if not creds:
+        return {
+            "error": "Belum login Google OAuth."
+        }
+
+    try:
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+
+        client = genai.Client(credentials=creds)
+
+        models = []
+        for model in client.models.list():
+            models.append(model.name)
+
+        return {
+            "models": models
+        }
+
+    except Exception as e:
+        return {
+            "error": f"Gagal tes OAuth Gemini: {e}"
+        }
 
 # =====================================================
 # LOAD DATA
@@ -1036,7 +1164,43 @@ with tab3:
         "Tab ini membuat 5–6 scene dari cerpen, rekomendasi foto per scene, "
         "dan prompt foto dengan lock karakter, pakaian, aksesoris, serta ruangan."
     )
+    proses_callback_google_oauth()
 
+    st.markdown("### Tes Google OAuth Gemini")
+
+    if "google_oauth_error" in st.session_state:
+        st.error(st.session_state["google_oauth_error"])
+
+    if "google_oauth_credentials" not in st.session_state:
+        try:
+            login_url = buat_url_login_google_oauth()
+            st.link_button(
+                "Login Google OAuth",
+                login_url,
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"Gagal membuat URL login Google OAuth: {e}")
+    else:
+        st.success("Google OAuth sudah login untuk sesi ini.")
+
+        if st.button("Tes OAuth Gemini - List Models", use_container_width=True):
+            hasil_tes_oauth = tes_oauth_gemini_models()
+
+            if "error" in hasil_tes_oauth:
+                st.error(hasil_tes_oauth["error"])
+            else:
+                st.success("OAuth diterima oleh Gemini API.")
+                st.write(hasil_tes_oauth["models"][:20])
+
+        if st.button("Logout Google OAuth", use_container_width=True):
+            st.session_state.pop("google_oauth_credentials", None)
+            st.session_state.pop("google_oauth_status", None)
+            st.session_state.pop("google_oauth_error", None)
+            st.rerun()
+
+    st.divider()
+    
     col_setting1, col_setting2 = st.columns(2)
 
     with col_setting1:
