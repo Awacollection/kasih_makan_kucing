@@ -413,16 +413,25 @@ def generate_foto_scene_gemini(prompt_foto, karakter, nomor_scene):
     try:
         from google import genai
         from google.genai import types
+        from google.auth.transport.requests import Request
     except Exception:
         return {
-            "error": "Library Gemini belum terbaca. Pastikan requirements.txt sudah berisi google-genai lalu reboot app."
+            "error": "Library Gemini/OAuth belum terbaca. Pastikan requirements.txt sudah berisi google-genai, google-auth, dan google-auth-oauthlib lalu reboot app."
         }
 
-    api_key = st.secrets.get("GEMINI_API_KEY", "")
+    creds = st.session_state.get("google_oauth_credentials")
 
-    if not api_key:
+    if not creds:
         return {
-            "error": "GEMINI_API_KEY belum ditemukan di Streamlit Secrets."
+            "error": "Belum login Google OAuth. Klik 'Login Google OAuth' dulu sebelum generate foto."
+        }
+
+    try:
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+    except Exception as e:
+        return {
+            "error": f"Gagal refresh OAuth token: {e}"
         }
 
     foto_ibu = karakter.get("foto_ibu", "")
@@ -445,7 +454,7 @@ def generate_foto_scene_gemini(prompt_foto, karakter, nomor_scene):
 
     output_path = folder_output / f"scene_{nomor_scene}.png"
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(credentials=creds)
 
     prompt_final = f"""
 Buat 1 foto realistis vertikal rasio 9:16 untuk video cerpen.
@@ -495,7 +504,7 @@ ATURAN TAMBAHAN:
 
     try:
         response = client.models.generate_content(
-            model="gemini-3.1-flash-image-preview",
+            model="gemini-2.5-flash-image",
             contents=contents,
             config=types.GenerateContentConfig(
                 response_modalities=["TEXT", "IMAGE"]
@@ -518,13 +527,13 @@ ATURAN TAMBAHAN:
                 }
 
         return {
-            "error": "Gemini tidak mengembalikan gambar.",
+            "error": "Gemini OAuth tidak mengembalikan gambar.",
             "raw": "\n".join(teks_jawaban)
         }
 
     except Exception as e:
         return {
-            "error": f"Gagal generate foto dengan Gemini: {e}"
+            "error": f"Gagal generate foto dengan OAuth Gemini: {e}"
         }
 
 
