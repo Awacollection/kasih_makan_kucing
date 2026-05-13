@@ -880,17 +880,6 @@ def ambil_query_param(nama):
     return value
 
 
-def buat_code_verifier_oauth():
-    import secrets
-
-    verifier = secrets.token_urlsafe(64)
-
-    if len(verifier) > 128:
-        verifier = verifier[:128]
-
-    return verifier
-
-
 def buat_google_oauth_flow():
     from google_auth_oauthlib.flow import Flow
 
@@ -906,15 +895,10 @@ def buat_google_oauth_flow():
         }
     }
 
-    code_verifier = st.session_state.get("google_oauth_code_verifier")
-    state = st.session_state.get("google_oauth_state")
-
     flow = Flow.from_client_config(
         client_config=client_config,
         scopes=OAUTH_SCOPES,
-        code_verifier=code_verifier,
-        autogenerate_code_verifier=False,
-        state=state
+        autogenerate_code_verifier=False
     )
 
     flow.redirect_uri = st.secrets.get("GOOGLE_REDIRECT_URI", "")
@@ -923,10 +907,7 @@ def buat_google_oauth_flow():
 
 
 def buat_url_login_google_oauth():
-    st.session_state["google_oauth_code_verifier"] = buat_code_verifier_oauth()
-
-    if "google_oauth_error" in st.session_state:
-        st.session_state.pop("google_oauth_error", None)
+    st.session_state.pop("google_oauth_error", None)
 
     flow = buat_google_oauth_flow()
 
@@ -947,13 +928,6 @@ def proses_callback_google_oauth():
         return
 
     if "google_oauth_credentials" in st.session_state:
-        return
-
-    if "google_oauth_code_verifier" not in st.session_state:
-        st.session_state["google_oauth_error"] = (
-            "Gagal login OAuth: code verifier tidak ditemukan. "
-            "Klik Login Google OAuth lagi dari awal."
-        )
         return
 
     try:
