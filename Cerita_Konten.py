@@ -880,45 +880,26 @@ def ambil_query_param(nama):
     return value
 
 
-def buat_google_oauth_flow():
-    from google_auth_oauthlib.flow import Flow
-
-    client_config = {
-        "web": {
-            "client_id": st.secrets.get("GOOGLE_CLIENT_ID", ""),
-            "client_secret": st.secrets.get("GOOGLE_CLIENT_SECRET", ""),
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [
-                st.secrets.get("GOOGLE_REDIRECT_URI", "")
-            ],
-        }
-    }
-
-    flow = Flow.from_client_config(
-        client_config=client_config,
-        scopes=OAUTH_SCOPES,
-        autogenerate_code_verifier=False
-    )
-
-    flow.redirect_uri = st.secrets.get("GOOGLE_REDIRECT_URI", "")
-
-    return flow
-
-
 def buat_url_login_google_oauth():
+    from urllib.parse import urlencode
+    import secrets
+
     st.session_state.pop("google_oauth_error", None)
 
-    flow = buat_google_oauth_flow()
-
-    authorization_url, state = flow.authorization_url(
-        access_type="offline",
-        prompt="consent"
-    )
-
+    state = secrets.token_urlsafe(32)
     st.session_state["google_oauth_state"] = state
 
-    return authorization_url
+    params = {
+        "client_id": st.secrets.get("GOOGLE_CLIENT_ID", ""),
+        "redirect_uri": st.secrets.get("GOOGLE_REDIRECT_URI", ""),
+        "response_type": "code",
+        "scope": " ".join(OAUTH_SCOPES),
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": state,
+    }
+
+    return "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
 
 
 def proses_callback_google_oauth():
@@ -931,10 +912,44 @@ def proses_callback_google_oauth():
         return
 
     try:
-        flow = buat_google_oauth_flow()
-        flow.fetch_token(code=code)
+        import requests
+        from google.oauth2.credentials import Credentials
 
-        creds = flow.credentials
+        token_response = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "client_id": st.secrets.get("GOOGLE_CLIENT_ID", ""),
+                "client_secret": st.secrets.get("GOOGLE_CLIENT_SECRET", ""),
+                "code": code,
+                "redirect_uri": st.secrets.get("GOOGLE_REDIRECT_URI", ""),
+                "grant_type": "authorization_code",
+            },
+            timeout=30
+        )
+
+        token_data = token_response.json()
+
+        if "error" in token_data:
+            st.session_state["google_oauth_error"] = (
+                f"Gagal login OAuth: {token_data.get('error')} - "
+                f"{token_data.get('error_description', '')}"
+            )
+
+            try:
+                st.query_params.clear()
+            except Exception:
+                pass
+
+            return
+
+        creds = Credentials(
+            token=token_data.get("access_token"),
+            refresh_token=token_data.get("refresh_token"),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=st.secrets.get("GOOGLE_CLIENT_ID", ""),
+            client_secret=st.secrets.get("GOOGLE_CLIENT_SECRET", ""),
+            scopes=OAUTH_SCOPES,
+        )
 
         project_id = st.secrets.get("GOOGLE_PROJECT_ID", "")
         if project_id:
@@ -942,7 +957,6 @@ def proses_callback_google_oauth():
 
         st.session_state["google_oauth_credentials"] = creds
         st.session_state["google_oauth_status"] = "Login Google OAuth berhasil."
-
         st.session_state.pop("google_oauth_error", None)
 
         try:
