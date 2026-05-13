@@ -504,7 +504,7 @@ ATURAN TAMBAHAN:
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash-image",
+            model="gemini-2.5-flash-preview-image",
             contents=contents,
             config=types.GenerateContentConfig(
                 response_modalities=["TEXT", "IMAGE"]
