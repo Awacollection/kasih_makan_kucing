@@ -942,6 +942,14 @@ def buat_output_scene(cerita, jumlah_scene, karakter):
             karakter=karakter
         )
 
+        prompt_video = buat_prompt_video_scene(
+            nomor_scene=nomor_scene,
+            durasi_per_scene=durasi_per_scene,
+            teks_scene=teks_scene,
+            analisa=analisa,
+            karakter=karakter
+        )
+
         hasil_scene.append({
             "nomor": nomor_scene,
             "durasi": durasi_per_scene,
@@ -953,7 +961,8 @@ def buat_output_scene(cerita, jumlah_scene, karakter):
             "posisi_anak": analisa["posisi_anak"],
             "kondisi_ruangan": analisa["kondisi_ruangan"],
             "rekomendasi_foto": analisa["rekomendasi_foto"],
-            "prompt_foto": prompt_foto
+            "prompt_foto": prompt_foto,
+            "prompt_video": prompt_video
         })
 
     return hasil_scene
@@ -963,11 +972,13 @@ def gabungkan_semua_scene(hasil_scene):
     blok = []
 
     for scene in hasil_scene:
+        prompt_video = scene.get("prompt_video", "")
+
         teks = f"""
 SCENE {scene["nomor"]}
 Durasi: {scene["durasi"]} detik
 
-Bagian cerita:
+Alur scene:
 {scene["bagian_cerita"]}
 
 Emosi:
@@ -988,6 +999,9 @@ Rekomendasi foto:
 
 Prompt foto:
 {scene["prompt_foto"]}
+
+Prompt video:
+{prompt_video}
 """.strip()
 
         blok.append(teks)
@@ -1695,8 +1709,25 @@ with tab3:
                 st.markdown("#### Rekomendasi Foto")
                 st.write(f"1. {scene['rekomendasi_foto']}")
 
-                st.markdown("#### Prompt Foto")
+                                st.markdown("#### Prompt Foto")
                 st.code(scene["prompt_foto"], language="text")
+
+                st.markdown("#### Prompt Video")
+                prompt_video_scene = scene.get("prompt_video", "")
+
+                if prompt_video_scene:
+                    st.code(prompt_video_scene, language="text")
+
+                    st.download_button(
+                        label=f"Download Prompt Video Scene {scene['nomor']}",
+                        data=prompt_video_scene,
+                        file_name=f"prompt_video_scene_{scene['nomor']}.txt",
+                        mime="text/plain",
+                        key=f"download_prompt_video_scene_{scene['nomor']}",
+                        use_container_width=True
+                    )
+                else:
+                    st.warning("Prompt video belum ada. Klik ulang tombol 'Buat Scene Cerpen' untuk membuat prompt video.")
 
                 st.markdown("#### Foto Hasil Generate Gemini")
 
