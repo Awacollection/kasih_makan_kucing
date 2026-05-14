@@ -1709,7 +1709,7 @@ with tab3:
                 st.markdown("#### Rekomendasi Foto")
                 st.write(f"1. {scene['rekomendasi_foto']}")
 
-                                st.markdown("#### Prompt Foto")
+                st.markdown("#### Prompt Foto")
                 st.code(scene["prompt_foto"], language="text")
 
                 st.markdown("#### Prompt Video")
@@ -1770,5 +1770,3 @@ with tab3:
 
                         st.success(f"Foto Scene {scene['nomor']} berhasil dibuat dan disimpan.")
                         st.rerun()
-    else:
-        st.info("Klik tombol 'Buat Scene Cerpen' untuk membuat scene dan prompt foto.")
