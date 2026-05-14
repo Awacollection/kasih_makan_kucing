@@ -794,7 +794,134 @@ Gunakan bahasa visual yang natural seperti arahan pemotretan, bukan tampilan bua
     prompt_lock = buat_prompt_lock_global(karakter)
 
     return f"{prompt_scene}\n\n{prompt_lock}"
+def buat_prompt_video_scene(nomor_scene, durasi_per_scene, teks_scene, analisa, karakter):
+    nama_ibu = teks_kosong_ke_default(karakter.get("nama_ibu", ""), "ibu")
+    nama_anak = teks_kosong_ke_default(karakter.get("nama_anak", ""), "anak")
 
+    detail_ibu = teks_kosong_ke_default(
+        karakter.get("detail_ibu", ""),
+        "Pertahankan wajah, usia visual, warna kulit, bentuk tubuh, proporsi tubuh, gaya rambut, dan ciri khas ibu sesuai foto referensi."
+    )
+
+    detail_anak = teks_kosong_ke_default(
+        karakter.get("detail_anak", ""),
+        "Pertahankan wajah, usia visual anak, warna kulit, bentuk tubuh, proporsi tubuh, gaya rambut, dan ciri khas anak sesuai foto referensi."
+    )
+
+    detail_pakaian_ibu = teks_kosong_ke_default(
+        karakter.get("detail_pakaian_ibu", ""),
+        "Pertahankan pakaian ibu sesuai foto referensi."
+    )
+
+    detail_pakaian_anak = teks_kosong_ke_default(
+        karakter.get("detail_pakaian_anak", ""),
+        "Pertahankan pakaian anak sesuai foto referensi."
+    )
+
+    detail_aksesoris_ibu = teks_kosong_ke_default(
+        karakter.get("detail_aksesoris_ibu", ""),
+        "Pertahankan aksesoris ibu sesuai foto referensi. Jangan menambah atau menghilangkan aksesoris."
+    )
+
+    detail_aksesoris_anak = teks_kosong_ke_default(
+        karakter.get("detail_aksesoris_anak", ""),
+        "Pertahankan aksesoris anak sesuai foto referensi. Jangan menambah atau menghilangkan aksesoris."
+    )
+
+    detail_ruangan = teks_kosong_ke_default(
+        karakter.get("detail_ruangan_lock", ""),
+        "Pertahankan ruangan sama seperti foto referensi. Jangan mengubah dekorasi, meja, furnitur, warna dinding, atau tata letak utama."
+    )
+
+    catatan_larangan = teks_kosong_ke_default(
+        karakter.get("catatan_larangan", ""),
+        "Jangan mengubah wajah, pakaian, aksesoris, ruangan, meja, dekorasi tembok, dan furnitur utama."
+    )
+
+    prompt_video = f"""
+Buat video realistis vertikal rasio 9:16 untuk SCENE {nomor_scene}.
+
+Gunakan foto hasil generate scene ini sebagai referensi utama / first frame image-to-video.
+Video harus mengikuti alur cerita scene ini, bukan membuat cerita baru.
+
+DURASI VIDEO:
+{durasi_per_scene} detik.
+
+ALUR SCENE:
+{teks_scene}
+
+EMOSI UTAMA:
+{analisa["emosi"]}
+
+VISUAL UTAMA:
+{analisa["visual"]}
+
+ARAHAN GERAK KARAKTER:
+- {nama_ibu}: {analisa["posisi_ibu"]}
+- {nama_anak}: {analisa["posisi_anak"]}
+- Gerakan tubuh harus pelan, natural, manusiawi, dan sesuai emosi scene.
+- Ekspresi wajah berubah halus sesuai perasaan scene, tidak berlebihan.
+- Jangan membuat gerakan aneh, patah-patah, melayang, berubah bentuk, atau tidak realistis.
+
+ARAHAN KAMERA:
+- Video vertikal 9:16.
+- Gaya kamera natural seperti video kehidupan nyata.
+- Gunakan camera movement halus, bisa slow push-in, sedikit handheld natural, atau kamera diam stabil.
+- Fokus utama pada hubungan emosi ibu dan anak.
+- Jangan membuat kamera berputar ekstrem.
+- Jangan membuat zoom terlalu cepat.
+- Jangan membuat transisi aneh.
+
+LOCK KARAKTER IBU:
+Nama ibu: {nama_ibu}
+{detail_ibu}
+
+Pakaian ibu:
+{detail_pakaian_ibu}
+
+Aksesoris ibu:
+{detail_aksesoris_ibu}
+
+LOCK KARAKTER ANAK:
+Nama anak: {nama_anak}
+{detail_anak}
+
+Pakaian anak:
+{detail_pakaian_anak}
+
+Aksesoris anak:
+{detail_aksesoris_anak}
+
+LOCK RUANGAN:
+{detail_ruangan}
+
+ATURAN KONSISTENSI:
+- Wajah ibu harus tetap sama seperti referensi.
+- Wajah anak harus tetap sama seperti referensi.
+- Usia visual ibu dan anak tidak boleh berubah.
+- Bentuk tubuh dan proporsi tubuh tidak boleh berubah.
+- Rambut tidak boleh berubah.
+- Pakaian ibu tidak boleh berubah.
+- Pakaian anak tidak boleh berubah.
+- Detail kancing, kerah, lengan, motif, warna kain, dan tekstur pakaian tidak boleh berubah.
+- Aksesoris tidak boleh berubah.
+- Ruangan harus tetap sama.
+- Meja, dekorasi tembok, sofa, furnitur utama, warna dinding, dan tata letak tidak boleh berubah.
+- Jangan menambahkan orang baru.
+- Jangan menambahkan properti besar baru.
+- Jangan menambahkan teks, subtitle, logo, watermark, tulisan, atau elemen grafis.
+
+GAYA VIDEO:
+Realistic cinematic daily life video, natural Indonesian family moment, emotional storytelling, soft natural lighting, realistic skin texture, realistic fabric texture, realistic room depth, natural human movement, smooth subtle motion, emotionally relatable, not AI-looking.
+
+NEGATIVE PROMPT:
+anime, kartun, ilustrasi, CGI, 3D render, boneka plastik, wajah berubah, wajah rusak, tangan rusak, jari berlebih, badan berubah, pakaian berubah, ruangan berubah, meja berpindah, dekorasi hilang, karakter baru, teks, watermark, logo, gerakan patah-patah, ekspresi berlebihan, kamera terlalu cepat, motion blur berlebihan, wajah meleleh, tubuh melengkung aneh.
+
+CATATAN LARANGAN KHUSUS:
+{catatan_larangan}
+""".strip()
+
+    return prompt_video
 
 def buat_output_scene(cerita, jumlah_scene, karakter):
     durasi_per_scene = 5
